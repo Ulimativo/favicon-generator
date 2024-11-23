@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  favicon-generator:
+    build: .
+    container_name: favicon-generator
+    ports:
+      - "80:80"
+    volumes:
+      - ./:/usr/share/nginx/html
+    restart: unless-stopped 

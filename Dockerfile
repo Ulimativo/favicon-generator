@@ -1,20 +1,10 @@
-# Build stage
-FROM node:18 as build
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-# Production stage
+# Use nginx to serve static files
 FROM nginx:alpine
 
-# Copy built files from build stage
-COPY --from=build /app/build /usr/share/nginx/html
-
-# Copy nginx configuration if needed
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy all static files to nginx html directory
+COPY index.html /usr/share/nginx/html/
+COPY styles.css /usr/share/nginx/html/
+COPY script.js /usr/share/nginx/html/
 
 EXPOSE 80
 

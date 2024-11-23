@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Primary Meta Tags -->
+    <title>Free Online Favicon Generator - Create PNG, ICO & SVG Favicons</title>
+    <meta name="title" content="Free Online Favicon Generator - Create PNG, ICO & SVG Favicons">
+    <meta name="description" content="Create favicons in multiple sizes and formats (PNG, ICO, SVG) for your website. Free online tool to generate and download favicons in various dimensions.">
+    
+    <!-- Keywords -->
+    <meta name="keywords" content="favicon generator, favicon maker, free favicon generator, create favicon, ico generator, png to ico, favicon converter, website icon generator, favicon creator, favicon builder, online favicon tool, favicon sizes, favicon svg, favicon png, favicon ico">
+    
+    <!-- Author and Copyright -->
+    <meta name="author" content="Your Name">
+    <meta name="copyright" content="Your Name or Company">
+    
+    <!-- Robots and Indexing -->
+    <meta name="robots" content="index, follow">
+    <meta name="googlebot" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://your-domain.com/favicon-generator">
+    <meta property="og:title" content="Free Online Favicon Generator - Create PNG, ICO & SVG Favicons">
+    <meta property="og:description" content="Create favicons in multiple sizes and formats (PNG, ICO, SVG) for your website. Free online tool to generate and download favicons in various dimensions.">
+    <meta property="og:image" content="https://your-domain.com/path/to/social-preview.png">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://your-domain.com/favicon-generator">
+    <meta property="twitter:title" content="Free Online Favicon Generator - Create PNG, ICO & SVG Favicons">
+    <meta property="twitter:description" content="Create favicons in multiple sizes and formats (PNG, ICO, SVG) for your website. Free online tool to generate and download favicons in various dimensions.">
+    <meta property="twitter:image" content="https://your-domain.com/path/to/social-preview.png">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://your-domain.com/favicon-generator">
+    
+    <!-- Favicon for your own site -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    
+    <!-- PWA Support -->
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#3b82f6">
+    
+    <!-- Additional Meta Information -->
+    <meta name="application-name" content="Favicon Generator">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Favicon Generator">
+    
+    <!-- Your existing style and script imports -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/png-to-ico@2.1.2/browser.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Favicon Generator",
+        "description": "Create favicons in multiple sizes and formats (PNG, ICO, SVG) for your website",
+        "url": "https://your-domain.com/favicon-generator",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "featureList": [
+            "Multiple output formats (PNG, ICO, SVG)",
+            "Various favicon sizes",
+            "Drag and drop interface",
+            "Bulk download option",
+            "High-quality image processing"
+        ],
+        "author": {
+            "@type": "Person",
+            "name": "Ulrich Raab"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Favicon Generator</h1>
+            <p class="subtitle">Create favicons in multiple sizes and formats</p>
+        </header>
+
+        <main>
+            <div class="card upload-container">
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-content">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                        <p>Drag and drop your image here<br>or click to browse</p>
+                    </div>
+                    <input type="file" id="imageInput" accept="image/*">
+                </div>
+            </div>
+
+            <div class="card controls-section">
+                <div class="format-controls">
+                    <label for="formatSelect">Output Format:</label>
+                    <select id="formatSelect">
+                        <option value="png">PNG (with transparency)</option>
+                        <option value="ico">ICO (multiple sizes)</option>
+                        <option value="svg">SVG (scalable)</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button id="generateBtn" class="btn primary">Generate Favicons</button>
+                    <button id="downloadAll" class="btn secondary">Download All</button>
+                </div>
+            </div>
+
+            <div class="preview-container" id="previewContainer"></div>
+        </main>
+
+        <footer>
+            <p>Created with ❤️ by 
+                <a href="https://ulrichraab.eu" target="_self">Ulrich Raab</a></p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

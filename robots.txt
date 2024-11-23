@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://favgen.ulrichraab.eu/sitemap.xml 

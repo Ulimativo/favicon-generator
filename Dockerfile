@@ -1,13 +1,21 @@
-# Use lightweight nginx image
+# Build stage
+FROM node:18 as build
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Production stage
 FROM nginx:alpine
 
-# Install required tools
-RUN apk add --no-cache bash curl
+# Copy built files from build stage
+COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy project files
-COPY . /usr/share/nginx/html/
+# Copy nginx configuration if needed
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
 
-# Expose port 80 
+CMD ["nginx", "-g", "daemon off;"]

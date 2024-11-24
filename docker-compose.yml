@@ -1,7 +1,16 @@
+version: '3.8'
+
 services:
   favicon-generator:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: YOUR_DOCKERHUB_USERNAME/favicon-generator:latest
     container_name: favicon-generator
-    ports:
-      - "3486:80"
+    networks:
+      - npm_default
     restart: unless-stopped
+
+networks:
+  npm_default:
+    external: true

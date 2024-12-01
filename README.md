@@ -2,7 +2,7 @@
 
 A modern, free online tool to generate favicons in multiple formats (PNG, ICO, SVG) and sizes. Create professional favicons for your website with ease.
 
-![Favicon Generator Preview](screenshot.png)
+![Favicon Generator Preview]([screenshot.png](https://github.com/Ulimativo/favicon-generator/blob/main/src/assets/icons/screenshot.png))
 
 ## 🚀 Features
 

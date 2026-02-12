@@ -1,26 +1,44 @@
-// Define sizes globally
-const sizes = [16, 32, 48, 96, 120, 144, 152, 180, 192, 512];
+import { createZip } from './lib/zip.js';
+import { encodeIco } from './lib/ico.js';
 
-// Get DOM elements
+const SIZES = [16, 32, 48, 64, 96, 128, 180, 192, 256, 512];
+const PACKAGE_REQUIRED_SIZES = [16, 32, 180, 192, 512];
+
 const imageInput = document.getElementById('imageInput');
-const generateBtn = document.getElementById('generateBtn');
-const downloadAll = document.getElementById('downloadAll');
+const downloadPackageBtn = document.getElementById('downloadPackage');
+const downloadAllBtn = document.getElementById('downloadAll');
+const resetBtn = document.getElementById('resetBtn');
+
 const previewContainer = document.getElementById('previewContainer');
 const dropZone = document.getElementById('dropZone');
+const dropZoneContent = document.getElementById('dropZoneContent');
+const sourcePreview = document.getElementById('sourcePreview');
 
-// Initialize event listeners
+const fileName = document.getElementById('fileName');
+const fileDimensions = document.getElementById('fileDimensions');
+const statusEl = document.getElementById('status');
+
+const modeSegment = document.getElementById('modeSegment');
+const snippetSection = document.getElementById('snippetSection');
+const snippetCode = document.getElementById('snippetCode');
+const copySnippetBtn = document.getElementById('copySnippet');
+
+let currentBitmap = null;
+let currentCanvases = new Map();
+let resizeMode = loadResizeMode();
+let previewUrl = null;
+
 function initializeEventListeners() {
-    // Generate button click
-    generateBtn.addEventListener('click', generateFavicons);
-    
-    // Download all button click
-    downloadAll.addEventListener('click', downloadAllFavicons);
-    
-    // File input change
+    downloadAllBtn.addEventListener('click', downloadAllPngs);
+    downloadPackageBtn.addEventListener('click', downloadPackage);
+    resetBtn.addEventListener('click', resetApp);
     imageInput.addEventListener('change', handleFileSelect);
-    
-    // Drag and drop events
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    copySnippetBtn.addEventListener('click', copySnippet);
+
+    initializeResizeModeControls();
+    setReadyState(false);
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
         dropZone.addEventListener(eventName, preventDefaults, false);
     });
 
@@ -30,246 +48,442 @@ function initializeEventListeners() {
     dropZone.addEventListener('drop', handleDrop, false);
 }
 
-// Prevent default drag behaviors
-function preventDefaults(e) {
-    e.preventDefault();
-    e.stopPropagation();
+function preventDefaults(event) {
+    event.preventDefault();
+    event.stopPropagation();
 }
 
-// Highlight drop zone
-function highlight(e) {
+function highlight() {
     dropZone.classList.add('drag-over');
 }
 
-// Unhighlight drop zone
-function unhighlight(e) {
+function unhighlight() {
     dropZone.classList.remove('drag-over');
 }
 
-// Handle dropped files
-function handleDrop(e) {
-    unhighlight(e);
-    const dt = e.dataTransfer;
-    const files = dt.files;
-    handleFiles(files);
+function handleDrop(event) {
+    unhighlight();
+    handleFiles(event.dataTransfer?.files);
 }
 
-// Handle file select
-function handleFileSelect(e) {
-    handleFiles(e.target.files);
+function handleFileSelect(event) {
+    handleFiles(event.target.files);
 }
 
-// Handle files
-function handleFiles(files) {
-    if (files.length > 0) {
-        const file = files[0];
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    generateFavicons();
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        } else {
-            alert('Please upload an image file!');
-        }
-    }
-}
-
-// Generate favicons
-function generateFavicons() {
-    const file = imageInput.files[0];
-    if (!file) {
-        alert('Please select an image first!');
+async function handleFiles(files) {
+    if (!files || files.length === 0) {
         return;
     }
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-            previewContainer.innerHTML = '';
-            sizes.forEach(size => createFavicon(img, size));
-        };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+        setStatus('Please upload an image file.', 'error');
+        return;
+    }
+
+    setStatus('Loading image…');
+    setReadyState(false);
+
+    setFileLabel(file.name);
+    setPreviewUrl(file);
+
+    try {
+        currentBitmap?.close?.();
+        currentBitmap = await createImageBitmap(file);
+        setDimensionsLabel(currentBitmap.width, currentBitmap.height);
+        await generateFavicons();
+    } catch (error) {
+        console.error('Failed to load image:', error);
+        setStatus('Could not read that image. Please try another file.', 'error');
+        resetGeneratedOnly();
+    }
 }
 
-// Create favicon
-function createFavicon(img, size) {
+function setPreviewUrl(file) {
+    if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        previewUrl = null;
+    }
+
+    previewUrl = URL.createObjectURL(file);
+    sourcePreview.src = previewUrl;
+    sourcePreview.hidden = false;
+    dropZoneContent.hidden = true;
+}
+
+async function generateFavicons() {
+    if (!currentBitmap) {
+        setStatus('Select an image to begin.', 'error');
+        return;
+    }
+
+    setStatus('Generating…');
+    previewContainer.setAttribute('aria-busy', 'true');
+    previewContainer.innerHTML = '';
+    currentCanvases = new Map();
+
+    for (const size of SIZES) {
+        const canvas = renderSize(currentBitmap, size, resizeMode);
+        currentCanvases.set(size, canvas);
+        previewContainer.appendChild(createPreviewItem(canvas, size));
+    }
+
+    previewContainer.setAttribute('aria-busy', 'false');
+    setReadyState(true);
+    updateSnippet();
+    setStatus(`Ready. Generated ${SIZES.length} sizes.`);
+}
+
+function renderSize(bitmap, size, mode) {
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    
-    // Use better quality scaling
+
+    const ctx = canvas.getContext('2d', { alpha: true });
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    
-    // Draw image to canvas
-    ctx.drawImage(img, 0, 0, size, size);
-    
-    // Create preview container
+
+    const sourceWidth = bitmap.width;
+    const sourceHeight = bitmap.height;
+
+    ctx.clearRect(0, 0, size, size);
+
+    if (mode === 'fit') {
+        const scale = Math.min(size / sourceWidth, size / sourceHeight);
+        const drawWidth = Math.max(1, Math.round(sourceWidth * scale));
+        const drawHeight = Math.max(1, Math.round(sourceHeight * scale));
+        const dx = Math.floor((size - drawWidth) / 2);
+        const dy = Math.floor((size - drawHeight) / 2);
+        ctx.drawImage(bitmap, dx, dy, drawWidth, drawHeight);
+    } else {
+        const scale = Math.max(size / sourceWidth, size / sourceHeight);
+        const cropWidth = size / scale;
+        const cropHeight = size / scale;
+        const cropX = Math.max(0, (sourceWidth - cropWidth) / 2);
+        const cropY = Math.max(0, (sourceHeight - cropHeight) / 2);
+
+        ctx.drawImage(
+            bitmap,
+            cropX,
+            cropY,
+            cropWidth,
+            cropHeight,
+            0,
+            0,
+            size,
+            size
+        );
+    }
+
+    return canvas;
+}
+
+function createPreviewItem(canvas, size) {
     const container = document.createElement('div');
     container.className = 'preview-item';
-    
-    // Add canvas to preview
+
     container.appendChild(canvas);
-    
-    // Add size label
+
     const label = document.createElement('div');
-    label.textContent = `${size}x${size}`;
+    label.textContent = `${size}×${size}`;
     container.appendChild(label);
-    
-    // Add download button
-    const downloadBtn = document.createElement('button');
-    downloadBtn.textContent = 'Download';
-    downloadBtn.onclick = () => downloadFavicon(canvas, size);
-    container.appendChild(downloadBtn);
-    
-    previewContainer.appendChild(container);
-}
 
-// Download single favicon
-async function downloadFavicon(canvas, size) {
-    const format = document.getElementById('formatSelect').value;
-    let data, filename;
-
-    try {
-        switch (format) {
-            case 'ico':
-                data = await convertToICO(canvas);
-                filename = `favicon-${size}x${size}.ico`;
-                break;
-            case 'svg':
-                data = await convertToSVG(canvas);
-                filename = `favicon-${size}x${size}.svg`;
-                break;
-            default: // png
-                data = canvas.toDataURL('image/png');
-                filename = `favicon-${size}x${size}.png`;
-        }
-
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = data;
-        link.click();
-    } catch (error) {
-        console.error('Error converting file:', error);
-        alert('Error converting to ' + format.toUpperCase() + ' format. Please try again.');
-    }
-}
-
-// Alternative ICO conversion function
-async function convertToICO(canvas) {
-    return new Promise((resolve, reject) => {
-        try {
-            // For ICO format, we'll use 16x16 and 32x32 sizes
-            const sizes = [16, 32];
-            const images = sizes.map(size => {
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = size;
-                tempCanvas.height = size;
-                const ctx = tempCanvas.getContext('2d');
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-                ctx.drawImage(canvas, 0, 0, size, size);
-                return tempCanvas;
-            });
-
-            // Create ICO data
-            const header = new Uint8Array([
-                0, 0,             // Reserved
-                1, 0,             // ICO type
-                images.length, 0   // Number of images
-            ]);
-
-            // Create ICO file
-            const blob = new Blob([header], { type: 'image/x-icon' });
-            const url = URL.createObjectURL(blob);
-            resolve(url);
-        } catch (error) {
-            console.error('ICO conversion error:', error);
-            reject(error);
-        }
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Download PNG';
+    button.addEventListener('click', async () => {
+        await downloadPng(size);
     });
+    container.appendChild(button);
+
+    return container;
 }
 
-// Convert canvas to SVG
-function convertToSVG(canvas) {
-    return new Promise((resolve) => {
-        const img = canvas.toDataURL('image/png');
-        const size = canvas.width;
-        
-        const svg = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-                <image width="100%" height="100%" href="${img}"/>
-            </svg>
-        `;
-        
-        const blob = new Blob([svg], { type: 'image/svg+xml' });
-        resolve(URL.createObjectURL(blob));
-    });
-}
-
-// Helper function to load external scripts
-function loadScript(url) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = url;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
-}
-
-// Download all favicons
-async function downloadAllFavicons() {
-    const canvases = document.querySelectorAll('canvas');
-    if (canvases.length === 0) {
-        alert('Please generate favicons first!');
+async function downloadPng(size) {
+    const canvas = currentCanvases.get(size);
+    if (!canvas) {
+        setStatus('Missing generated size. Please generate again.', 'error');
         return;
     }
 
-    // Create a new ZIP file
-    const zip = new JSZip();
-    
-    // Add each favicon to the ZIP
-    for (let i = 0; i < canvases.length; i++) {
-        const canvas = canvases[i];
-        const size = sizes[i];
-        
-        // Get canvas data as PNG
-        const dataUrl = canvas.toDataURL('image/png');
-        const base64Data = dataUrl.replace('data:image/png;base64,', '');
-        
-        // Add to zip with appropriate filename
-        zip.file(`favicon-${size}x${size}.png`, base64Data, {base64: true});
-    }
-
     try {
-        // Generate the ZIP file
-        const content = await zip.generateAsync({type: 'blob'});
-        
-        // Create download link
-        const link = document.createElement('a');
-        link.download = 'favicons.zip';
-        link.href = URL.createObjectURL(content);
-        link.click();
-        
-        // Clean up
-        setTimeout(() => {
-            URL.revokeObjectURL(link.href);
-        }, 1000);
+        const pngBytes = await canvasToPngBytes(canvas);
+        downloadBytes(`favicon-${size}x${size}.png`, 'image/png', pngBytes);
+        setStatus(`Downloaded ${size}×${size}.`);
     } catch (error) {
-        console.error('Error creating ZIP file:', error);
-        alert('Error creating ZIP file. Please try again.');
+        console.error('PNG export failed:', error);
+        setStatus('Download failed. Please try again.', 'error');
     }
 }
 
-// Initialize everything when the page loads
+async function downloadAllPngs() {
+    if (!currentCanvases.size) {
+        setStatus('Generate favicons first.', 'error');
+        return;
+    }
+
+    setStatus('Building ZIP…');
+    const files = [];
+    for (const size of SIZES) {
+        const canvas = currentCanvases.get(size);
+        if (!canvas) {
+            continue;
+        }
+        files.push({
+            name: `favicon-${size}x${size}.png`,
+            data: await canvasToPngBytes(canvas)
+        });
+    }
+
+    const zipBytes = createZip(files);
+    downloadBytes('favicons.zip', 'application/zip', zipBytes);
+    setStatus('Downloaded ZIP of PNGs.');
+}
+
+async function downloadPackage() {
+    if (!currentCanvases.size) {
+        setStatus('Generate favicons first.', 'error');
+        return;
+    }
+
+    for (const size of PACKAGE_REQUIRED_SIZES) {
+        if (!currentCanvases.get(size)) {
+            setStatus('Missing generated sizes. Please generate again.', 'error');
+            return;
+        }
+    }
+
+    setStatus('Building package…');
+
+    const files = [];
+
+    const icoBytes = await createIcoBytes();
+    files.push({ name: 'favicon.ico', data: icoBytes });
+
+    files.push({ name: 'favicon-16x16.png', data: await canvasToPngBytes(currentCanvases.get(16)) });
+    files.push({ name: 'favicon-32x32.png', data: await canvasToPngBytes(currentCanvases.get(32)) });
+    files.push({ name: 'apple-touch-icon.png', data: await canvasToPngBytes(currentCanvases.get(180)) });
+    files.push({ name: 'android-chrome-192x192.png', data: await canvasToPngBytes(currentCanvases.get(192)) });
+    files.push({ name: 'android-chrome-512x512.png', data: await canvasToPngBytes(currentCanvases.get(512)) });
+
+    files.push({ name: 'site.webmanifest', data: new TextEncoder().encode(buildManifest()) });
+    files.push({ name: 'favicon.html', data: new TextEncoder().encode(buildHtmlSnippet()) });
+
+    const zipBytes = createZip(files);
+    downloadBytes('favicon-package.zip', 'application/zip', zipBytes);
+    setStatus('Downloaded favicon package.');
+}
+
+async function createIcoBytes() {
+    const icoSizes = [16, 32, 48, 64, 128, 256];
+    const images = [];
+
+    for (const size of icoSizes) {
+        const canvas = currentCanvases.get(size);
+        if (!canvas) {
+            continue;
+        }
+        images.push({ size, png: await canvasToPngBytes(canvas) });
+    }
+
+    if (!images.length) {
+        throw new Error('No ICO images available');
+    }
+
+    return encodeIco(images);
+}
+
+async function canvasToPngBytes(canvas) {
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) {
+        throw new Error('PNG export failed');
+    }
+    return new Uint8Array(await blob.arrayBuffer());
+}
+
+function buildHtmlSnippet() {
+    return [
+        '<!-- Favicons -->',
+        '<link rel="icon" href="/favicon.ico" sizes="any">',
+        '<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">',
+        '<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">',
+        '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
+        '<link rel="manifest" href="/site.webmanifest">',
+        ''
+    ].join('\n');
+}
+
+function buildManifest() {
+    const manifest = {
+        name: 'Your Site',
+        short_name: 'Site',
+        icons: [
+            {
+                src: '/android-chrome-192x192.png',
+                sizes: '192x192',
+                type: 'image/png'
+            },
+            {
+                src: '/android-chrome-512x512.png',
+                sizes: '512x512',
+                type: 'image/png'
+            }
+        ]
+    };
+    return JSON.stringify(manifest, null, 2) + '\n';
+}
+
+function updateSnippet() {
+    const snippet = buildHtmlSnippet();
+    snippetCode.textContent = snippet;
+    snippetSection.hidden = false;
+}
+
+async function copySnippet() {
+    const text = snippetCode.textContent || '';
+    if (!text) {
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(text);
+        copySnippetBtn.textContent = 'Copied';
+        setTimeout(() => {
+            copySnippetBtn.textContent = 'Copy';
+        }, 1200);
+    } catch {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+        copySnippetBtn.textContent = 'Copied';
+        setTimeout(() => {
+            copySnippetBtn.textContent = 'Copy';
+        }, 1200);
+    }
+}
+
+function initializeResizeModeControls() {
+    const buttons = modeSegment.querySelectorAll('.segmented-btn');
+    setResizeMode(resizeMode);
+
+    buttons.forEach((button) => {
+        button.addEventListener('click', async () => {
+            const mode = button.getAttribute('data-mode');
+            if (mode !== 'fit' && mode !== 'fill') {
+                return;
+            }
+            if (mode === resizeMode) {
+                return;
+            }
+
+            setResizeMode(mode);
+            if (currentBitmap) {
+                await generateFavicons();
+            }
+        });
+    });
+}
+
+function setResizeMode(mode) {
+    resizeMode = mode === 'fill' ? 'fill' : 'fit';
+    saveResizeMode(resizeMode);
+
+    const buttons = modeSegment.querySelectorAll('.segmented-btn');
+    buttons.forEach((button) => {
+        const isPressed = button.getAttribute('data-mode') === resizeMode;
+        button.setAttribute('aria-pressed', isPressed ? 'true' : 'false');
+    });
+}
+
+function loadResizeMode() {
+    try {
+        const value = localStorage.getItem('favgen.resizeMode');
+        return value === 'fill' ? 'fill' : 'fit';
+    } catch {
+        return 'fit';
+    }
+}
+
+function saveResizeMode(mode) {
+    try {
+        localStorage.setItem('favgen.resizeMode', mode);
+    } catch {
+        // ignore
+    }
+}
+
+function setReadyState(isReady) {
+    downloadAllBtn.disabled = !isReady;
+    downloadPackageBtn.disabled = !isReady;
+    resetBtn.disabled = !isReady && !imageInput.files?.length;
+}
+
+function setStatus(message, tone = 'info') {
+    statusEl.textContent = message;
+    statusEl.dataset.tone = tone;
+}
+
+function setFileLabel(name) {
+    fileName.textContent = name || 'Selected image';
+}
+
+function setDimensionsLabel(width, height) {
+    fileDimensions.textContent = `${width}×${height}`;
+    fileDimensions.hidden = false;
+}
+
+function resetGeneratedOnly() {
+    currentCanvases = new Map();
+    previewContainer.innerHTML = '';
+    previewContainer.setAttribute('aria-busy', 'false');
+    snippetSection.hidden = true;
+    setReadyState(false);
+}
+
+function resetApp() {
+    currentBitmap?.close?.();
+    currentBitmap = null;
+    currentCanvases = new Map();
+
+    if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        previewUrl = null;
+    }
+
+    imageInput.value = '';
+    previewContainer.innerHTML = '';
+    previewContainer.setAttribute('aria-busy', 'false');
+    snippetSection.hidden = true;
+
+    sourcePreview.hidden = true;
+    sourcePreview.removeAttribute('src');
+    dropZoneContent.hidden = false;
+
+    fileName.textContent = 'No image selected';
+    fileDimensions.hidden = true;
+    fileDimensions.textContent = '';
+
+    setReadyState(false);
+    setStatus('Select an image to begin.');
+}
+
+function downloadBytes(filename, mimeType, bytes) {
+    const blob = new Blob([bytes], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 document.addEventListener('DOMContentLoaded', initializeEventListeners);
+

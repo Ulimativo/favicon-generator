@@ -38,13 +38,13 @@
     <link rel="canonical" href="https://your-domain.com/favicon-generator">
     
     <!-- Favicon for your own site -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
+    <link rel="icon" href="assets/icons/favicon.ico">
     
     <!-- PWA Support -->
-    <link rel="manifest" href="/site.webmanifest">
+    <link rel="manifest" href="site.webmanifest">
     <meta name="theme-color" content="#3b82f6">
     
     <!-- Additional Meta Information -->
@@ -55,9 +55,7 @@
     
     <!-- Your existing style and script imports -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/png-to-ico@2.1.2/browser.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/styles.css">
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -87,48 +85,101 @@
     </script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Favicon Generator</h1>
-            <p class="subtitle">Create favicons in multiple sizes and formats</p>
+    <div class="app">
+        <header class="app-header">
+            <div class="brand">
+                <h1>Favicon Generator</h1>
+                <p class="subtitle">Drop an image, download a ready-to-install favicon package.</p>
+            </div>
         </header>
 
-        <main>
-            <div class="card upload-container">
+        <main class="app-main">
+            <section class="panel panel-upload" aria-labelledby="uploadTitle">
+                <div class="panel-header">
+                    <h2 id="uploadTitle">Image</h2>
+                </div>
+
                 <div class="drop-zone" id="dropZone">
-                    <div class="drop-zone-content">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24">
+                    <div class="drop-zone-content" id="dropZoneContent">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" aria-hidden="true">
                             <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                         </svg>
-                        <p>Drag and drop your image here<br>or click to browse</p>
+                        <p class="drop-zone-title">Drop your image</p>
+                        <p class="drop-zone-subtitle">PNG, JPG, SVG, WebP…</p>
+                        <p class="drop-zone-hint">or click to browse</p>
                     </div>
-                    <input type="file" id="imageInput" accept="image/*">
+                    <img class="source-preview" id="sourcePreview" alt="Selected image preview" hidden>
+                    <input type="file" id="imageInput" accept="image/*" aria-label="Upload image">
                 </div>
-            </div>
 
-            <div class="card controls-section">
-                <div class="format-controls">
-                    <label for="formatSelect">Output Format:</label>
-                    <select id="formatSelect">
-                        <option value="png">PNG (with transparency)</option>
-                        <option value="ico">ICO (multiple sizes)</option>
-                        <option value="svg">SVG (scalable)</option>
-                    </select>
+                <div class="file-row" aria-live="polite">
+                    <div class="file-meta">
+                        <span class="file-name" id="fileName">No image selected</span>
+                        <span class="file-dimensions" id="fileDimensions" hidden></span>
+                    </div>
+                    <button type="button" id="resetBtn" class="btn subtle" disabled>Reset</button>
                 </div>
-                <div class="button-group">
-                    <button id="generateBtn" class="btn primary">Generate Favicons</button>
-                    <button id="downloadAll" class="btn secondary">Download All</button>
-                </div>
-            </div>
+            </section>
 
-            <div class="preview-container" id="previewContainer"></div>
+            <section class="panel panel-actions" aria-labelledby="actionsTitle">
+                <div class="panel-header">
+                    <h2 id="actionsTitle">Options</h2>
+                </div>
+
+                <div class="mode-controls" role="group" aria-label="Resize mode">
+                    <div class="control-row">
+                        <span class="control-label">Resize</span>
+                        <div class="segmented" id="modeSegment">
+                            <button type="button" class="segmented-btn" data-mode="fit" aria-pressed="true">Fit</button>
+                            <button type="button" class="segmented-btn" data-mode="fill" aria-pressed="false">Fill</button>
+                        </div>
+                    </div>
+                    <p class="control-help" id="modeHelp">Fit keeps the whole image. Fill crops to a square.</p>
+                </div>
+
+                <div class="actions">
+                    <button id="downloadPackage" class="btn primary" disabled>Download Package</button>
+                    <button id="downloadAll" class="btn secondary" disabled>Download PNGs (.zip)</button>
+                </div>
+
+                <div class="status-row">
+                    <div class="status" id="status" role="status" aria-live="polite" aria-atomic="true">Select an image to begin.</div>
+                </div>
+
+                <details class="details" id="detailsPanel">
+                    <summary>What’s in the package?</summary>
+                    <ul class="package-list">
+                        <li><code>favicon.ico</code> (multi-size)</li>
+                        <li><code>favicon-16x16.png</code>, <code>favicon-32x32.png</code></li>
+                        <li><code>apple-touch-icon.png</code> (180×180)</li>
+                        <li><code>android-chrome-192x192.png</code>, <code>android-chrome-512x512.png</code></li>
+                        <li><code>site.webmanifest</code> + <code>favicon.html</code> snippet</li>
+                    </ul>
+                </details>
+            </section>
+
+            <section class="panel panel-snippet" id="snippetSection" hidden aria-labelledby="snippetTitle">
+                <div class="panel-header snippet-header">
+                    <h2 id="snippetTitle">Install Snippet</h2>
+                    <button type="button" id="copySnippet" class="btn tiny">Copy</button>
+                </div>
+                <pre class="snippet" aria-label="HTML snippet"><code id="snippetCode"></code></pre>
+                <p class="snippet-hint">Also included in “Download Package” as <code>favicon.html</code>.</p>
+            </section>
+
+            <section class="panel panel-previews" aria-labelledby="previewsTitle">
+                <div class="panel-header">
+                    <h2 id="previewsTitle">Previews</h2>
+                    <p class="panel-subtitle">Click any size to download a PNG.</p>
+                </div>
+                <div class="preview-container" id="previewContainer" aria-busy="false"></div>
+            </section>
         </main>
 
-        <footer>
-            <p>Created with ❤️ by 
-                <a href="https://ulrichraab.eu" target="_self">Ulrich Raab</a></p>
+        <footer class="app-footer">
+            <p>Created by <a href="https://ulrichraab.eu" target="_self">Ulrich Raab</a></p>
         </footer>
     </div>
-    <script src="script.js"></script>
+    <script type="module" src="js/script.js"></script>
 </body>
 </html>

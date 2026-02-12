@@ -5,12 +5,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    image: YOUR_DOCKERHUB_USERNAME/favicon-generator:latest
+    image: favicon-generator:latest
     container_name: favicon-generator
-    networks:
-      - npm_default
+    ports:
+      - "8080:80"
     restart: unless-stopped
-
-networks:
-  npm_default:
-    external: true

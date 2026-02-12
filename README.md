@@ -2,7 +2,7 @@
 
 A modern, free online tool to generate favicons in multiple formats (PNG, ICO, SVG) and sizes. Create professional favicons for your website with ease.
 
-![Favicon Generator Preview]([screenshot.png](https://github.com/Ulimativo/favicon-generator/blob/main/src/assets/icons/screenshot.png))
+![Favicon Generator Preview](src/assets/icons/screenshot.png)
 
 ## 🚀 Features
 
@@ -19,17 +19,14 @@ A modern, free online tool to generate favicons in multiple formats (PNG, ICO, S
    - Drag and drop an image onto the upload area
    - Or click to select a file from your computer
 
-2. **Select Format**:
-   - Choose your preferred output format (PNG, ICO, or SVG)
-   - Each format has its own advantages:
-     - PNG: Best for modern browsers, supports transparency
-     - ICO: Traditional Windows favicon format
-     - SVG: Scalable vector format
+2. **Choose Resize Mode**:
+   - **Fit**: keeps the whole image (may add transparent padding)
+   - **Fill**: fills the square (may crop)
 
-3. **Generate**:
-   - Click "Generate Favicons" to create all sizes
-   - Preview all generated favicons
-   - Download individual sizes or all at once
+3. **Download**:
+   - Click any preview tile to download a PNG size
+   - Use **Download PNGs (.zip)** for all PNG sizes
+   - Use **Download Package** for a ready-to-install ZIP (ICO + key PNGs + `site.webmanifest` + `favicon.html` snippet)
 
 ## 💻 Development
 
@@ -37,10 +34,13 @@ A modern, free online tool to generate favicons in multiple formats (PNG, ICO, S
 
 ```
 favicon-generator/
-├── index.html
-├── styles.css
-├── script.js
-├── Dockerfile
+├── src/
+│   ├── index.html
+│   ├── css/
+│   ├── js/
+│   └── assets/
+├── docker/
+│   └── Dockerfile
 ├── docker-compose.yml
 ├── nginx.conf
 └── README.md
@@ -49,6 +49,11 @@ favicon-generator/
 ### Requirements
 - Modern web browser
 - Docker (for containerized deployment)
+
+### Run locally
+
+- Docker: `docker compose up --build` then open `http://localhost:8080`
+- No Docker: `python3 -m http.server --directory src 8000` then open `http://localhost:8000`
 
 ## 🔐 Security
 
@@ -93,10 +98,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📦 Dependencies
 
-- [JSZip](https://stuk.github.io/jszip/) - For ZIP file creation
-- [png-to-ico](https://www.npmjs.com/package/png-to-ico) - For ICO conversion
-
-
+No build-time dependencies; the app runs as static HTML/CSS/JS in the browser.
 
 ## 📞 Support
 
